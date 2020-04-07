@@ -17,18 +17,22 @@ const notifier = require("mail-notifier"),
     tls: true,
     tlsOptions: { rejectUnauthorized: false },
     markSeen: false,
-  };
+  },
+  n = notifier(imap);
 
 (async () => {
   const api = await v3.discovery.nupnpSearch().then((searchResults) => {
     const host = searchResults[0].ipaddress;
     return v3.api.createLocal(host).connect(hue_username);
   });
-  notifier(imap)
-    .on("connected", () => console.log(`Started listening ${username}`))
-    .on("end", () => n.start())
-    .on("mail", () => handler())
-    .start();
+
+  n.on("end", () => {
+    console.log('Reconnecting to imap server')
+    n.start()
+  });
+  n.on("connected", () => console.log(`Started listening ${username}`));
+  n.on("mail", () => handler());
+  n.start();
 
   const handler = async () => {
     console.log("New mail received, triggering lights");
