@@ -1,23 +1,23 @@
 const notifier = require("mail-notifier"),
-moment = require("moment"),
-v3 = require("node-hue-api").v3,
-sleep = require("sleep"),
-LightState = v3.lightStates.LightState,
- LIGHT_ID = 1,
- { username, password, hue_username } = require("./secrets.json"),
- timeFormat = "hh:mm:ss",
- time = moment(moment(), timeFormat),
- beforeTime = moment("08:00:00", timeFormat),
- afterTime = moment("22:00:00", timeFormat),
-imap = {
-  user: username,
-  password: password,
-  host: "imap.gmail.com",
-  port: 993,
-  tls: true,
-  tlsOptions: { rejectUnauthorized: false },
-  markSeen: false,
-};
+  moment = require("moment"),
+  v3 = require("node-hue-api").v3,
+  sleep = require("sleep"),
+  LightState = v3.lightStates.LightState,
+  LIGHT_ID = 1,
+  { username, password, hue_username } = require("./secrets.json"),
+  timeFormat = "hh:mm:ss",
+  time = moment(moment(), timeFormat),
+  beforeTime = moment("08:00:00", timeFormat),
+  afterTime = moment("22:00:00", timeFormat),
+  imap = {
+    user: username,
+    password: password,
+    host: "imap.gmail.com",
+    port: 993,
+    tls: true,
+    tlsOptions: { rejectUnauthorized: false },
+    markSeen: false,
+  };
 
 (async () => {
   const api = await v3.discovery.nupnpSearch().then((searchResults) => {
@@ -69,5 +69,5 @@ imap = {
     for (let index = 0; index < array.length; index++) {
       await callback(array[index], index, array);
     }
-  }
+  };
 })();
