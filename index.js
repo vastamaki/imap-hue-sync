@@ -11,11 +11,6 @@ const beforeTime = moment("08:00:00", timeFormat);
 const afterTime = moment("22:00:00", timeFormat);
 
 (async () => {
-  if (time.isBetween(beforeTime, afterTime)) {
-    console.log("is between");
-  } else {
-    console.log("is not between");
-  }
   const api = await v3.discovery.nupnpSearch().then((searchResults) => {
     const host = searchResults[0].ipaddress;
     return v3.api.createLocal(host).connect(hue_username);
@@ -39,14 +34,19 @@ const afterTime = moment("22:00:00", timeFormat);
 
   const handler = async (api) => {
     console.log("New mail received, triggering lights");
-    const light_status = await getLightStatus();
-    const brightness = light_status
-      ? [0, 100, 0, 100, 0, 100]
-      : [100, 0, 100, 0, 100, 0];
-    await asyncForEach(brightness, async (value) => {
-      sleep.sleep(1);
-      await blinkLight(value, api);
-    });
+    if (time.isBetween(beforeTime, afterTime)) {
+      console.log("Current time is between awake hours, triggering lights");
+      const light_status = await getLightStatus();
+      const brightness = light_status
+        ? [0, 100, 0, 100, 0, 100]
+        : [100, 0, 100, 0, 100, 0];
+      await asyncForEach(brightness, async (value) => {
+        sleep.sleep(1);
+        await blinkLight(value, api);
+      });
+    } else {
+      console.log("Current time is not between awake hours, not triggering lights");
+    }
   };
 
   async function getLightStatus() {
