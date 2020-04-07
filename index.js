@@ -1,38 +1,36 @@
-const notifier = require("mail-notifier");
-const moment = require("moment");
-const v3 = require("node-hue-api").v3;
-var sleep = require("sleep");
-const LightState = v3.lightStates.LightState;
-const LIGHT_ID = 1;
-const { username, password, hue_username } = require("./secrets.json");
-const timeFormat = "hh:mm:ss";
-const time = moment(moment(), timeFormat);
-const beforeTime = moment("08:00:00", timeFormat);
-const afterTime = moment("22:00:00", timeFormat);
+const notifier = require("mail-notifier"),
+moment = require("moment"),
+v3 = require("node-hue-api").v3,
+sleep = require("sleep"),
+LightState = v3.lightStates.LightState,
+ LIGHT_ID = 1,
+ { username, password, hue_username } = require("./secrets.json"),
+ timeFormat = "hh:mm:ss",
+ time = moment(moment(), timeFormat),
+ beforeTime = moment("08:00:00", timeFormat),
+ afterTime = moment("22:00:00", timeFormat),
+imap = {
+  user: username,
+  password: password,
+  host: "imap.gmail.com",
+  port: 993,
+  tls: true,
+  tlsOptions: { rejectUnauthorized: false },
+  markSeen: false,
+};
 
 (async () => {
   const api = await v3.discovery.nupnpSearch().then((searchResults) => {
     const host = searchResults[0].ipaddress;
     return v3.api.createLocal(host).connect(hue_username);
   });
-
-  const imap = {
-    user: username,
-    password: password,
-    host: "imap.gmail.com",
-    port: 993,
-    tls: true,
-    tlsOptions: { rejectUnauthorized: false },
-    markSeen: false,
-  };
-
   notifier(imap)
     .on("connected", () => console.log(`Started listening ${username}`))
     .on("end", () => n.start())
-    .on("mail", () => handler(api))
+    .on("mail", () => handler())
     .start();
 
-  const handler = async (api) => {
+  const handler = async () => {
     console.log("New mail received, triggering lights");
     if (time.isBetween(beforeTime, afterTime)) {
       console.log("Current time is between awake hours, triggering lights");
@@ -45,17 +43,19 @@ const afterTime = moment("22:00:00", timeFormat);
         await blinkLight(value, api);
       });
     } else {
-      console.log("Current time is not between awake hours, not triggering lights");
+      console.log(
+        "Current time is not between awake hours, not triggering lights"
+      );
     }
   };
 
-  async function getLightStatus() {
+  const getLightStatus = async () => {
     const status = await api.lights.getLightState(LIGHT_ID);
     if (status.on == true) return true;
     return false;
-  }
+  };
 
-  async function blinkLight(brightness, api) {
+  const blinkLight = async (brightness, api) => {
     let state;
     if (brightness == 0) {
       state = new LightState().off();
@@ -63,9 +63,9 @@ const afterTime = moment("22:00:00", timeFormat);
       state = new LightState().on().brightness(brightness);
     }
     return api.lights.setLightState(LIGHT_ID, state);
-  }
+  };
 
-  async function asyncForEach(array, callback) {
+  const asyncForEach = async (array, callback) => {
     for (let index = 0; index < array.length; index++) {
       await callback(array[index], index, array);
     }
