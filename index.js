@@ -1,15 +1,12 @@
 const notifier = require("mail-notifier"),
-  moment = require("moment"),
+  setHours = require("date-fns/setHours"),
+  isWithinInterval = require("date-fns/isWithinInterval"),
   v3 = require("node-hue-api").v3,
   sleep = require("sleep"),
   LightState = v3.lightStates.LightState,
   LIGHT_ID = 1,
   { username, password, hue_username } = require("./secrets.json"),
-  timeFormat = "hh:mm:ss",
-  time = moment(moment(), timeFormat),
-  beforeTime = moment("08:00:00", timeFormat),
-  afterTime = moment("22:00:00", timeFormat),
-  imap = {
+  n = notifier({
     user: username,
     password: password,
     host: "imap.gmail.com",
@@ -17,35 +14,42 @@ const notifier = require("mail-notifier"),
     tls: true,
     tlsOptions: { rejectUnauthorized: false },
     markSeen: false,
-  },
-  n = notifier(imap);
+  });
 
 (async () => {
-  const api = await v3.discovery.nupnpSearch().then((searchResults) => {
-    const host = searchResults[0].ipaddress;
-    return v3.api.createLocal(host).connect(hue_username);
-  });
+  const bridge = await v3.discovery.nupnpSearch();
+  const host = bridge[0].ipaddress;
+  const api = await v3.api.createLocal(host).connect(hue_username);
 
-  n.on("end", () => {
-    console.log('Reconnecting to imap server')
-    n.start()
-  });
-  n.on("connected", () => console.log(`Started listening ${username}`));
-  n.on("mail", () => handler());
   n.start();
 
+  n.on("connected", () => {
+    console.log(`Started listening ${username}`);
+    // Test handler
+    handler();
+  });
+  n.on("mail", () => handler());
+
+  n.on("end", () => {
+    console.log("Reconnecting to imap server");
+    n.start();
+  });
+
   const handler = async () => {
-    console.log("New mail received, triggering lights");
-    if (time.isBetween(beforeTime, afterTime)) {
+    console.log("New mail received, checking time");
+    const isBetweenAwakeHours = isWithinInterval(new Date(), {
+      start: setHours(new Date(), 8),
+      end: setHours(new Date(), 24),
+    });
+    if (isBetweenAwakeHours) {
       console.log("Current time is between awake hours, triggering lights");
       const light_status = await getLightStatus();
-      const brightness = light_status
-        ? [0, 100, 0, 100, 0, 100]
-        : [100, 0, 100, 0, 100, 0];
-      await asyncForEach(brightness, async (value) => {
-        sleep.sleep(1);
+      for (let i = 0; i < 5; i++) {
+        const dividable = i % 2 === 0;
+        const value = light_status === dividable ? 100 : 0;
         await blinkLight(value, api);
-      });
+        sleep.sleep(1);
+      }
     } else {
       console.log(
         "Current time is not between awake hours, not triggering lights"
@@ -55,7 +59,7 @@ const notifier = require("mail-notifier"),
 
   const getLightStatus = async () => {
     const status = await api.lights.getLightState(LIGHT_ID);
-    if (status.on == true) return true;
+    if (status.on === true) return true;
     return false;
   };
 
@@ -67,11 +71,5 @@ const notifier = require("mail-notifier"),
       state = new LightState().on().brightness(brightness);
     }
     return api.lights.setLightState(LIGHT_ID, state);
-  };
-
-  const asyncForEach = async (array, callback) => {
-    for (let index = 0; index < array.length; index++) {
-      await callback(array[index], index, array);
-    }
   };
 })();
