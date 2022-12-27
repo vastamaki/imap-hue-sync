@@ -3,15 +3,21 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "date-fns": "^2.16.1",
+    "@types/dotenv": "^8.2.0",
+    "date-fns": "^2.29.3",
+    "dotenv": "^16.0.3",
     "mail-notifier": "^0.5.0",
-    "node-hue-api": "^4.0.9",
+    "node-hue-api": "^4.0.11",
     "sleep": "^6.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.18"
   }
 }
